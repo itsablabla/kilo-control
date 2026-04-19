@@ -6,6 +6,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export const dynamic = "force-dynamic";
 
+// Only allow redirecting back to a same-origin relative path. Anything else
+// (absolute URLs, protocol-relative `//evil.com`, backslashes, etc.) falls
+// back to `/` to prevent open-redirect abuse.
+function safeNext(next: string | undefined | null): string {
+  if (!next) return "/";
+  if (!next.startsWith("/")) return "/";
+  if (next.startsWith("//") || next.startsWith("/\\")) return "/";
+  return next;
+}
+
 async function doLogin(formData: FormData) {
   "use server";
   const password = String(formData.get("password") ?? "");
@@ -13,8 +23,8 @@ async function doLogin(formData: FormData) {
   if (!ok) {
     redirect("/login?error=1");
   }
-  const next = String(formData.get("next") ?? "/");
-  redirect(next || "/");
+  const next = safeNext(String(formData.get("next") ?? "/"));
+  redirect(next);
 }
 
 export default async function LoginPage({
@@ -23,8 +33,9 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string; next?: string }>;
 }) {
   const params = await searchParams;
+  const next = safeNext(params.next);
   if (await isAuthed()) {
-    redirect(params.next || "/");
+    redirect(next);
   }
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
@@ -35,7 +46,7 @@ export default async function LoginPage({
         </CardHeader>
         <CardContent>
           <form action={doLogin} className="space-y-3">
-            <input type="hidden" name="next" value={params.next ?? "/"} />
+            <input type="hidden" name="next" value={next} />
             <Input
               name="password"
               type="password"

@@ -22,6 +22,17 @@ function toHex(buf: ArrayBuffer) {
   return out;
 }
 
+function fromHex(hex: string) {
+  if (hex.length % 2 !== 0) return null;
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    const byte = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+    if (Number.isNaN(byte)) return null;
+    out[i] = byte;
+  }
+  return out;
+}
+
 export function sessionSecret(env: Record<string, string | undefined>) {
   return env.APP_SESSION_SECRET || env.APP_PASSWORD || "dev-insecure-secret";
 }
@@ -37,8 +48,12 @@ export async function verify(signed: string | undefined, secret: string) {
   const idx = signed.lastIndexOf(".");
   if (idx < 0) return false;
   const value = signed.slice(0, idx);
-  const expected = await sign(value, secret);
-  return expected === signed;
+  const sigHex = signed.slice(idx + 1);
+  const sig = fromHex(sigHex);
+  if (!sig) return false;
+  const key = await hmacKey(secret);
+  // crypto.subtle.verify performs a timing-safe comparison internally.
+  return crypto.subtle.verify("HMAC", key, sig, enc.encode(value));
 }
 
 export const SESSION_COOKIE = "kilo_control_session";
