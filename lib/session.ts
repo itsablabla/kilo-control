@@ -23,12 +23,11 @@ function toHex(buf: ArrayBuffer) {
 }
 
 function fromHex(hex: string) {
-  if (hex.length % 2 !== 0) return null;
+  if (hex.length === 0 || hex.length % 2 !== 0) return null;
+  if (!/^[0-9a-fA-F]+$/.test(hex)) return null;
   const out = new Uint8Array(hex.length / 2);
   for (let i = 0; i < out.length; i++) {
-    const byte = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-    if (Number.isNaN(byte)) return null;
-    out[i] = byte;
+    out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
   }
   return out;
 }
